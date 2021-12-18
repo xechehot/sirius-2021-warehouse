@@ -23,7 +23,7 @@
   },
   "orders": [
     {
-      "mskus": [
+      "items": [
         {
           "id":  1,
           "count": 1

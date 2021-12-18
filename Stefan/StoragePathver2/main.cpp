@@ -119,9 +119,10 @@ void testing() {
 
 
 signed main() {
-    freopen("/Users/stefan/Desktop/sirius/sirius-2021-warehouse/data_sample/sample.json", "r", stdin);
+
+    freopen("../../../data_sample/sample.json", "r", stdin);
     json j;
     cin >> j;
-    cout << j["orders"][0]["mskus"];
+    cout << j["orders"][0]["items"];
 //    testing();
 }

@@ -1,0 +1,42 @@
+{
+  "warehouse": {
+    "meta": {
+      "floors": 2,
+      "block_x": 2,
+      "block_y": 3,
+      "rows": 5,
+      "sections": 10
+    },
+    "stock": [
+      {
+        "id": 1,
+        "p": {
+          "floor": 1,
+          "block_x": 2,
+          "block_y": 3,
+          "row": 3,
+          "section": 9
+        },
+        "count": 100
+      }
+    ]
+  },
+  "orders": [
+    {
+      "mskus": [
+        {
+          "id":  1,
+          "count": 1
+        },
+        {
+          "id":  2,
+          "count": 1
+        },
+        {
+          "id":  3,
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

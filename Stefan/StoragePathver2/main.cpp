@@ -3,6 +3,9 @@
 #include <vector>
 #include <map>
 #include <random>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 using namespace std;
 mt19937 rnd(std::chrono::high_resolution_clock::now().time_since_epoch().count());
@@ -29,6 +32,11 @@ int calc(vector<int> &permutation, vector<vector<int>> &graph, vector<pair<int, 
         cerr << location2[permutation.back()].first << ' ' << location2[permutation.back()].second;
     assert(minimal < INF);
     return result + minimal;
+}
+
+
+void Input() {
+
 }
 
 void testing() {
@@ -111,5 +119,9 @@ void testing() {
 
 
 signed main() {
-    testing();
+    freopen("/Users/stefan/Desktop/sirius/sirius-2021-warehouse/data_sample/sample.json", "r", stdin);
+    json j;
+    cin >> j;
+    cout << j["orders"][0]["mskus"];
+//    testing();
 }

@@ -232,7 +232,6 @@ signed main() {
 //            for (auto j: cres.second) cout << order[floor][j].id << ' ' << order[floor][j].cnt << '\n';
 //            cout << "\n\n";
         }
-//        cout << "\n\n\n";
     }
 
     cout << all_result;

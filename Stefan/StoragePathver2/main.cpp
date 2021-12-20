@@ -35,6 +35,10 @@ struct product {
     int id;
     position p;
     int cnt;
+
+    bool operator<(const product &a) const {
+        return cnt > a.cnt;
+    }
 };
 
 int get_distance_in_one_block(position now, position next, int sections) {
@@ -86,89 +90,67 @@ int get_distance(position now, position next, int rows, int sections) {
 
 const int FLOORS = 5, BLOCK_X = 5, BLOCK_Y = 5, ROWS = 20, SECTIONS = 20, MAX_CAPACITY = 32;
 
-//map<int, int> warehouse[FLOORS][BLOCK_X][BLOCK_Y][ROWS][SECTIONS];
-//
-//void fill_warehouse(vector<product> &products, int floors, int block_x, int block_y, int rows, int sections) {
-//    for (int i = 0; i < products.size(); i++)
-//        warehouse[products[i].p.floor][products[i].p.block_x][products[i].p.block_y][products[i].p.row][products[i].p.section][products[i].id] = products[i].cnt;
-//}
-
-int calc(vector<int> &permutation, vector<item> &items, map<int, position> &item_position, int rows, int sections,
+int calc(vector<int> &permutation, vector<product> &items, int rows, int sections,
          int block_x, int block_y) {
+    if (permutation.empty()) return 0;
     position start = {-1, block_x / 2, block_y, rows, 1};
     position last = start;
-    int res = 0, cur_capacity = MAX_CAPACITY;
+    int res = 0;
     for (int i = 0; i < items.size(); i++) {
-        position cur = item_position[items[permutation[i]].id];
+        position cur = items[permutation[i]].p;
         res += get_distance(last, cur, rows, sections);
-        int rem = items[permutation[i]].cnt;
-        while (rem > 0) {
-            int mi = min(rem, cur_capacity);
-            rem -= mi;
-            cur_capacity -= mi;
-            if (rem == 0) break;
-            if (cur_capacity == 0) {
-                position up = cur;
-                up.block_y = 1;
-                up.section = sections;
-                res += get_distance(cur, up, rows, sections) + 2;
-                res += get_distance(up, start, rows, sections) + 2;
-                res += get_distance(cur, start, rows, sections) + 2;
-                cur_capacity = MAX_CAPACITY;
-            }
-        }
-        if (cur_capacity == 0) {
-            position up = cur;
-            up.block_y = 1;
-            up.section = sections;
-            res += get_distance(cur, up, rows, sections) + 2;
-            res += get_distance(up, start, rows, sections) + 2;
-            cur_capacity = MAX_CAPACITY;
-            last = start;
-        } else last = cur;
+        last = cur;
     }
-    if (cur_capacity != MAX_CAPACITY) {
-        position up = last;
-        up.block_y = 1;
-        up.section = sections;
-        res += get_distance(last, up, rows, sections) + 2;
-        res += get_distance(up, start, rows, sections) + 2;
-    }
+    position up = last;
+    up.block_y = 1;
+    up.section = sections;
+    res += get_distance(last, up, rows, sections) + 2;
+    res += get_distance(up, start, rows, sections);
     return res;
 }
 
+void print(product a) {
+    cout << "id: " << a.id << '\n';
+    cout << "floor: " << a.p.floor << '\n';
+    cout << "block_x: " << a.p.block_x << '\n';
+    cout << "block_y: " << a.p.block_y << '\n';
+    cout << "row: " << a.p.row << '\n';
+    cout << "section: " << a.p.section << '\n';
+    cout << "count: " << a.cnt << '\n';
+    cout << "\n\n\n";
+}
 
-pair<int, vector<int>>
-find_best_path(vector<item> &order, map<int, position> &item_position, int rows, int sections, int block_x,
-               int block_y) {
-    if (order.empty()) return {0, {}};
-    vector<int> permutation(order.size());
-    iota(permutation.begin(), permutation.end(), 0);
-    shuffle(permutation.begin(), permutation.end(),
-            mt19937(std::chrono::high_resolution_clock::now().time_since_epoch().count()));
-
-    long double t = 1;
-    int ans = calc(permutation, order, item_position, rows, sections, block_x, block_y);
-    int bestans = ans;
-    vector<int> bestperm = permutation;
-    for (int i = 0; i < 100000; i++) {
-        t *= 0.999;
-        int a = rnd() % permutation.size();
-        int b = rnd() % permutation.size();
-        swap(permutation[a], permutation[b]);
-        bool ok = false;
-        int cur = calc(permutation, order, item_position, rows, sections, block_x, block_y);
-        if (cur < ans || rnd2() < exp((long double) (ans - cur) / t)) {
-            if (cur < bestans) {
-                bestans = cur;
-                bestperm = permutation;
+int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int block_x,
+                int block_y) {
+    if (cells2.empty()) return 0;
+    vector<vector<product>> cells(floors + 1);
+    for (auto i: cells2) cells[i.p.floor].push_back(i);
+    vector<vector<product>> bucket;
+    for (int i = 1; i <= floors; i++) {
+        vector<product> cur_bucket;
+        int cur_capacity = MAX_CAPACITY;
+        for (int j = 0; j < cells[i].size(); j++) {
+            if (cur_capacity >= cells[i][j].cnt)
+                cur_bucket.push_back(cells[i][j]);
+            else {
+                bucket.push_back(cur_bucket);
+                cur_bucket = {cells[i][j]};
+                cur_capacity = MAX_CAPACITY - cells[i][j].cnt;
             }
-            ans = cur;
-            ok = true;
         }
-        if (!ok) swap(permutation[a], permutation[b]);
+        if (!cur_bucket.empty()) bucket.push_back(cur_bucket);
     }
-    return {bestans, bestperm};
+    int res = 0;
+    for (auto &cur_bucket: bucket) {
+        vector<int> permutation(cur_bucket.size());
+        iota(permutation.begin(), permutation.end(), 0);
+        for (auto j: cur_bucket) {
+            print(j);
+        }
+        cout << "---------------------\n";
+        res += calc(permutation, cur_bucket, rows, sections, block_x, block_y);
+    }
+    return res;
 }
 
 
@@ -181,7 +163,11 @@ void parse(vector<item> &items) {
             cnt += items[j].cnt;
             j++;
         }
-        items2.push_back({items[i].id, cnt});
+        while (cnt > 0) {
+            int mi = min(cnt, MAX_CAPACITY);
+            items2.push_back({items[i].id, mi});
+            cnt -= mi;
+        }
         i = j - 1;
     }
     items = items2;
@@ -198,7 +184,7 @@ signed main() {
     int block_y = data["warehouse"]["meta"]["block_y"];
     int rows = data["warehouse"]["meta"]["rows"];
     int sections = data["warehouse"]["meta"]["sections"];
-    map<int, position> item_position;
+    map<int, vector<product>> product_position;
 
     vector<vector<item>> orders(data["orders"].size());
     for (int i = 0; i < orders.size(); i++)
@@ -214,32 +200,38 @@ signed main() {
         products[i].p.row = data["warehouse"]["stock"][i]["p"]["row"];
         products[i].p.section = data["warehouse"]["stock"][i]["p"]["section"];
         products[i].cnt = data["warehouse"]["stock"][i]["count"];
-        item_position[products[i].id] = products[i].p;
+        product_position[products[i].id].push_back(products[i]);
     }
 
-//    fill_warehouse(products, floors, block_x, block_y, rows, sections);
+    for (auto &i: product_position)
+        sort(i.second.begin(), i.second.end());
+
     int all_result = 0;
+
     for (int i = 0; i < orders.size(); i += batch_size) {
-        vector<vector<item>> order(floors + 1);
+
+        vector<item> order;
         for (int j = i; j < min((int) orders.size(), i + batch_size); j++)
             for (auto[id, cnt]: orders[j])
-                order[item_position[id].floor].push_back({id, cnt});
-        for (int floor = 1; floor <= floors; floor++) {
-            parse(order[floor]);
-            pair<int, vector<int>> cres = find_best_path(order[floor], item_position, rows, sections, block_x, block_y);
-            all_result += cres.first;
-            // printing path
-//            cout << cres.first << '\n';
-//            for (auto j: cres.second) cout << order[floor][j].id << ' ' << order[floor][j].cnt << '\n';
-//            cout << "\n\n";
-        }
-    }
+                order.push_back({id, cnt});
+        sort(order.begin(), order.end());
+        parse(order);
 
+        vector<product> cells;
+        for (auto[id, cnt]: order) {
+            int rem = cnt;
+            for (auto j: product_position[id]) {
+                if (rem > 0) {
+                    int mi = min(j.cnt, rem);
+                    rem -= mi;
+                    cells.push_back(j);
+                }
+            }
+        }
+        all_result += solve_batch(cells, floors, rows, sections, block_x, block_y);
+    }
     cout << all_result;
 }
 /*
-Утверждается, что товар лежит только в 1 определенном месте
-Утверждается, что товара хватает на все заказы
 Не оптимальное разбиение заказов на батчи
-Утверждается что заказы собираются на разных этажах независимо
  */

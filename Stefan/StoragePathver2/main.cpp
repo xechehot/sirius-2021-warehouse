@@ -145,6 +145,9 @@ void mutation_swapping_path(vector<vector<int>> &permutations, vector<vector<pro
 }
 
 
+
+
+
 void print_bucket(vector<vector<product>> &bucket, vector<vector<int>> &bestpermutations, int res) {
     cout << res << "\n";
     for (int i = 0; i < bucket.size(); i++) {

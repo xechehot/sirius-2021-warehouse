@@ -144,8 +144,30 @@ void mutation_swapping_path(vector<vector<int>> &permutations, vector<vector<pro
     }
 }
 
+void mutation_reversing_path(vector<vector<int>> &permutations, vector<vector<product>> &bucket, vector<int> &answers,
+                             vector<int> &bestanswers, vector<vector<int>> &bestpermutations, long double t, int rows,
+                             int sections,
+                             int block_x, int block_y) {
+    for (int i = 0; i < permutations.size(); i++) {
+        int a = rnd() % permutations[i].size();
+        int b = rnd() % permutations[i].size();
+        if (a == b) continue;
+        if (a > b) swap(a, b);
+        reverse(permutations[i].begin() + a, permutations[i].begin() + b + 1);
+        bool ok = false;
+        int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
+        if (cur < answers[i] || rnd2() < exp((long double) (answers[i] - cur) / t)) {
+            if (cur < bestanswers[i]) {
+                bestanswers[i] = cur;
+                bestpermutations[i] = permutations[i];
+            }
+            answers[i] = cur;
+            ok = true;
+        }
+        if (!ok) reverse(permutations[i].begin() + a, permutations[i].begin() + b + 1);
 
-
+    }
+}
 
 
 void print_bucket(vector<vector<product>> &bucket, vector<vector<int>> &bestpermutations, int res) {
@@ -191,12 +213,15 @@ int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int
     long double t = 1;
     for (int zigzig = 0; zigzig < 10000; zigzig++) {
         t *= 0.999;
+        mutation_reversing_path(permutations, bucket, answers, bestanswers, bestpermutations, t, rows, sections,
+                                block_x,
+                                block_y);
         mutation_swapping_path(permutations, bucket, answers, bestanswers, bestpermutations, t, rows, sections, block_x,
                                block_y);
     }
     int res = 0;
     for (int i = 0; i < bucket.size(); i++) res += bestanswers[i];
-//    print_bucket(bucket, bestpermutations, res);
+    //print_bucket(bucket, bestpermutations, res);
     return res;
 }
 
@@ -222,7 +247,7 @@ void parse(vector<item> &items) {
 
 
 signed main() {
-    freopen("../../../data_sample/sample.json", "r", stdin);
+    freopen("../../../data_sample/sample_1600_1.json", "r", stdin);
     json data;
     cin >> data;
     int batch_size = data["batch_size"];
@@ -237,7 +262,6 @@ signed main() {
     for (int i = 0; i < orders.size(); i++)
         for (int j = 0; j < data["orders"][i]["items"].size(); j++)
             orders[i].push_back({data["orders"][i]["items"][j]["id"], data["orders"][i]["items"][j]["count"]});
-
     vector<product> products(data["warehouse"]["stock"].size());
     for (int i = 0; i < products.size(); i++) {
         products[i].id = data["warehouse"]["stock"][i]["id"];

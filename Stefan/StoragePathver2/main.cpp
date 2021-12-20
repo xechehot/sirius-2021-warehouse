@@ -1,10 +1,7 @@
-#include <iostream>
-#include <algorithm>
-#include <vector>
-#include <map>
-#include <random>
+#include <bits/stdc++.h>
+#include <bits/extc++.h>
 #include <nlohmann/json.hpp>
-#include <chrono>
+
 
 using json = nlohmann::json;
 
@@ -19,7 +16,18 @@ double GetTime() { return clock() / (double) CLOCKS_PER_SEC; };
 
 
 struct position {
-    int floor, block_x, block_y, row, section;
+    int floor = 0, block_x = 0, block_y = 0, row = 0, section = 0;
+    bool operator<(const position &a) const {
+        if (floor == a.floor) {
+            if (block_x == a.block_x) {
+                if (block_y == a.block_y) {
+                    if (row == a.row) {
+                        return section < a.section;
+                    } else return row < a.row;
+                } else return block_y < a.block_y;
+            } else return block_x < a.block_x;
+        } else return floor < a.floor;
+    }
 };
 
 struct item {
@@ -37,7 +45,11 @@ struct product {
     int cnt;
 
     bool operator<(const product &a) const {
-        return cnt > a.cnt;
+        if (cnt == a.cnt) {
+            if (id == a.id)
+                return p < a.p;
+            else return id < a.id;
+        } else return cnt > a.cnt;
     }
 };
 
@@ -169,6 +181,31 @@ void mutation_reversing_path(vector<vector<int>> &permutations, vector<vector<pr
     }
 }
 
+void mutation_cutting_merging_buckets(vector<vector<int>> &permutations, vector<vector<product>> &bucket,
+                                      vector<int> &answers,
+                                      vector<int> &bestanswers, vector<vector<int>> &bestpermutations, long double t,
+                                      int rows,
+                                      int sections,
+                                      int block_x, int block_y) {
+
+}
+
+
+void mutation_5(vector<vector<product>> &bucket, map<int, vector<product>> &product_position, map<product, int> &used) {
+    assert(!bucket.empty());
+    int chosen_bucket = rnd() % bucket.size();
+    int chosen_cell = rnd() % bucket[chosen_bucket].size();
+    swap(bucket[chosen_bucket][chosen_cell], bucket[chosen_bucket].back());
+    vector<product> candidat;
+    int sum = 0;
+    product cur = bucket[chosen_bucket].back();
+//    for (product j: product_position[cur.id]) {
+//        if (j.p.floor == cur.p.floor(j.id != cur.id || j.p != cur.p || j.cnt != cur.cnt)) {
+//            candidat.push_back(j);
+//        }
+//    }
+}
+
 
 void print_bucket(vector<vector<product>> &bucket, vector<vector<int>> &bestpermutations, int res) {
     cout << res << "\n";
@@ -209,6 +246,7 @@ int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int
     vector<int> answers(bucket.size()), bestanswers;
     for (int i = 0; i < bucket.size(); i++)
         answers[i] = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
+
     bestanswers = answers;
     long double t = 1;
     for (int zigzig = 0; zigzig < 10000; zigzig++) {
@@ -216,6 +254,7 @@ int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int
         mutation_reversing_path(permutations, bucket, answers, bestanswers, bestpermutations, t, rows, sections,
                                 block_x,
                                 block_y);
+
         mutation_swapping_path(permutations, bucket, answers, bestanswers, bestpermutations, t, rows, sections, block_x,
                                block_y);
     }
@@ -257,7 +296,7 @@ signed main() {
     int rows = data["warehouse"]["meta"]["rows"];
     int sections = data["warehouse"]["meta"]["sections"];
     map<int, vector<product>> product_position;
-
+    map<position, int> used;
     vector<vector<item>> orders(data["orders"].size());
     for (int i = 0; i < orders.size(); i++)
         for (int j = 0; j < data["orders"][i]["items"].size(); j++)
@@ -277,9 +316,7 @@ signed main() {
         sort(i.second.begin(), i.second.end());
 
     int all_result = 0;
-
     for (int i = 0; i < orders.size(); i += batch_size) {
-
         vector<item> order;
         for (int j = i; j < min((int) orders.size(), i + batch_size); j++)
             for (auto[id, cnt]: orders[j])
@@ -290,13 +327,14 @@ signed main() {
         vector<product> cells;
         for (auto[id, cnt]: order) {
             int rem = cnt;
-            for (auto j: product_position[id]) {
-                if (rem > 0) {
-                    int mi = min(rem, j.cnt);
+            for (auto &j: product_position[id]) {
+                if (rem > 0 && j.cnt - used[j.p] > 0) {
+                    int mi = min(rem, j.cnt - used[j.p]);
                     rem -= j.cnt;
-                    auto j2 = j;
-                    j2.cnt = mi;
-                    cells.push_back(j2);
+                    auto need = j;
+                    need.cnt = mi;
+                    cells.push_back(need);
+                    used[j.p] += mi;
                 }
             }
         }

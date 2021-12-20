@@ -144,9 +144,8 @@ int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int
     for (auto &cur_bucket: bucket) {
         vector<int> permutation(cur_bucket.size());
         iota(permutation.begin(), permutation.end(), 0);
-        for (auto j: cur_bucket) {
+        for (auto j: cur_bucket)
             print(j);
-        }
         cout << "---------------------\n";
         res += calc(permutation, cur_bucket, rows, sections, block_x, block_y);
     }
@@ -175,7 +174,7 @@ void parse(vector<item> &items) {
 
 
 signed main() {
-    freopen("/Users/user/Desktop/Project/sirius-2021-warehouse/data_sample/sample.json", "r", stdin);
+    freopen("../../../data_sample/sample.json", "r", stdin);
     json data;
     cin >> data;
     int batch_size = data["batch_size"];
@@ -202,7 +201,6 @@ signed main() {
         products[i].cnt = data["warehouse"]["stock"][i]["count"];
         product_position[products[i].id].push_back(products[i]);
     }
-
     for (auto &i: product_position)
         sort(i.second.begin(), i.second.end());
 
@@ -222,9 +220,11 @@ signed main() {
             int rem = cnt;
             for (auto j: product_position[id]) {
                 if (rem > 0) {
-                    int mi = min(j.cnt, rem);
-                    rem -= mi;
-                    cells.push_back(j);
+                    int mi = min(rem, j.cnt);
+                    rem -= j.cnt;
+                    auto j2 = j;
+                    j2.cnt = mi;
+                    cells.push_back(j2);
                 }
             }
         }

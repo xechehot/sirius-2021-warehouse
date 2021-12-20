@@ -1,5 +1,4 @@
 #include <bits/stdc++.h>
-#include <bits/extc++.h>
 #include <nlohmann/json.hpp>
 
 
@@ -17,6 +16,11 @@ double GetTime() { return clock() / (double) CLOCKS_PER_SEC; };
 
 struct position {
     int floor = 0, block_x = 0, block_y = 0, row = 0, section = 0;
+
+    bool operator==(const position &a) const {
+        return floor == a.floor && block_x == a.block_x && block_y == a.block_y && row == a.row && section == a.section;
+    }
+
     bool operator<(const position &a) const {
         if (floor == a.floor) {
             if (block_x == a.block_x) {
@@ -43,6 +47,10 @@ struct product {
     int id;
     position p;
     int cnt;
+
+    bool operator==(const product &a) const {
+        return id == a.id && p == a.p && cnt == a.cnt;
+    }
 
     bool operator<(const product &a) const {
         if (cnt == a.cnt) {
@@ -100,7 +108,7 @@ int get_distance(position now, position next, int rows, int sections) {
     }
 }
 
-const int FLOORS = 5, BLOCK_X = 5, BLOCK_Y = 5, ROWS = 20, SECTIONS = 20, MAX_CAPACITY = 32;
+const int MAX_CAPACITY = 32;
 
 
 int calc(vector<int> &permutation, vector<product> &items, int rows, int sections,
@@ -133,77 +141,75 @@ void print(product a) {
     cout << "\n\n\n";
 }
 
-void mutation_swapping_path(vector<vector<int>> &permutations, vector<vector<product>> &bucket, vector<int> &answers,
-                            vector<int> &bestanswers, vector<vector<int>> &bestpermutations, long double t, int rows,
-                            int sections,
-                            int block_x, int block_y) {
-    for (int i = 0; i < permutations.size(); i++) {
-        int a = rnd() % permutations[i].size();
-        int b = rnd() % permutations[i].size();
-        if (a == b) continue;
-        swap(permutations[i][a], permutations[i][b]);
-        bool ok = false;
-        int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
-        if (cur < answers[i] || rnd2() < exp((long double) (answers[i] - cur) / t)) {
-            if (cur < bestanswers[i]) {
-                bestanswers[i] = cur;
-                bestpermutations[i] = permutations[i];
-            }
-            answers[i] = cur;
-            ok = true;
-        }
-        if (!ok) swap(permutations[i][a], permutations[i][b]);
-    }
+pair<int, int> mutation_swapping_path(vector<int> &permutation) {
+    int a = rnd() % permutation.size();
+    int b = rnd() % permutation.size();
+    swap(permutation[a], permutation[b]);
+    return {a, b};
 }
 
-void mutation_reversing_path(vector<vector<int>> &permutations, vector<vector<product>> &bucket, vector<int> &answers,
-                             vector<int> &bestanswers, vector<vector<int>> &bestpermutations, long double t, int rows,
-                             int sections,
-                             int block_x, int block_y) {
-    for (int i = 0; i < permutations.size(); i++) {
-        int a = rnd() % permutations[i].size();
-        int b = rnd() % permutations[i].size();
-        if (a == b) continue;
-        if (a > b) swap(a, b);
-        reverse(permutations[i].begin() + a, permutations[i].begin() + b + 1);
-        bool ok = false;
-        int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
-        if (cur < answers[i] || rnd2() < exp((long double) (answers[i] - cur) / t)) {
-            if (cur < bestanswers[i]) {
-                bestanswers[i] = cur;
-                bestpermutations[i] = permutations[i];
-            }
-            answers[i] = cur;
-            ok = true;
-        }
-        if (!ok) reverse(permutations[i].begin() + a, permutations[i].begin() + b + 1);
-
-    }
+pair<int, int> mutation_flipping_path(vector<int> &permutation) {
+    int a = rnd() % permutation.size();
+    int b = rnd() % permutation.size();
+    if (a > b) swap(a, b);
+    reverse(permutation.begin() + a, permutation.begin() + b + 1);
+    return {a, b};
 }
 
-void mutation_cutting_merging_buckets(vector<vector<int>> &permutations, vector<vector<product>> &bucket,
-                                      vector<int> &answers,
-                                      vector<int> &bestanswers, vector<vector<int>> &bestpermutations, long double t,
-                                      int rows,
-                                      int sections,
-                                      int block_x, int block_y) {
+struct changing_cell {
+    int chosen;
+    product rep, cur;
+};
 
-}
-
-
-void mutation_5(vector<vector<product>> &bucket, map<int, vector<product>> &product_position, map<product, int> &used) {
-    assert(!bucket.empty());
-    int chosen_bucket = rnd() % bucket.size();
-    int chosen_cell = rnd() % bucket[chosen_bucket].size();
-    swap(bucket[chosen_bucket][chosen_cell], bucket[chosen_bucket].back());
+changing_cell mutation_changing_cell(vector<product> &bucket, map<int, vector<product>> &product_position,
+                                     map<position, int> &used) {
+    int chosen_cell = rnd() % bucket.size();
+    product cur = bucket[chosen_cell];
     vector<product> candidat;
-    int sum = 0;
-    product cur = bucket[chosen_bucket].back();
-//    for (product j: product_position[cur.id]) {
-//        if (j.p.floor == cur.p.floor(j.id != cur.id || j.p != cur.p || j.cnt != cur.cnt)) {
-//            candidat.push_back(j);
-//        }
-//    }
+    for (product j: product_position[cur.id])
+        if (j.p.floor == cur.p.floor && j != cur && j.cnt - used[cur.p] >= cur.cnt)
+            candidat.push_back(j);
+    product useless = {-1, -1, -1, -1, -1, -1, -1};
+    if (candidat.empty()) return {-1, useless, useless};
+    product chosen = candidat[rnd() % candidat.size()];
+    product rep = cur;
+    used[cur.p] -= cur.cnt;
+    used[chosen.p] += cur.cnt;
+    cur.id = chosen.id;
+    cur.p = chosen.p;
+    return {chosen_cell, rep, cur};
+}
+
+struct changing_bucket {
+    int up, pr, chosen;
+};
+
+changing_bucket mutation_changing_bucket(vector<vector<product>> &bucket, vector<int> &bucket_capacity,
+                                         vector<vector<int>> &permutations, int chosen) {
+    int pr = rnd() % (int) bucket[chosen].size();
+    vector<int> candidats;
+    for (int iter = 0; iter < 50; iter++) {
+        int x2 = rnd() % (int) bucket.size();
+        if (chosen == x2) continue;
+        if (bucket_capacity[x2] + bucket[chosen][pr].cnt <= MAX_CAPACITY) {
+
+            bucket_capacity[x2] += bucket[chosen][pr].cnt;
+            bucket_capacity[chosen] -= bucket[chosen][pr].cnt;
+
+            bucket[x2].push_back(bucket[chosen][pr]);
+            bucket[chosen].erase(bucket[chosen].begin() + pr);
+            permutations[x2].push_back(permutations[x2].size());
+            int up = permutations[chosen][pr];
+            permutations[chosen].erase(permutations[chosen].begin() + pr);
+
+            for (auto &j: permutations[chosen])
+                if (j > up)
+                    j--;
+
+            return {up, pr, x2};
+        }
+    }
+    return {-1, -1, -1};
 }
 
 
@@ -216,8 +222,10 @@ void print_bucket(vector<vector<product>> &bucket, vector<vector<int>> &bestperm
     }
 }
 
-int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int block_x,
-                int block_y) {
+int
+solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position, map<position, int> &used, int floors,
+            int rows, int sections, int block_x,
+            int block_y) {
     if (cells2.empty()) return 0;
     vector<vector<product>> cells(floors + 1);
     for (auto i: cells2) cells[i.p.floor].push_back(i);
@@ -236,8 +244,14 @@ int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int
         }
         if (!cur_bucket.empty()) bucket.push_back(cur_bucket);
     }
+    vector<int> bucket_capacity(bucket.size());
+    for (int i = 0; i < bucket.size(); i++)
+        for (auto j: bucket[i])
+            bucket_capacity[i] += j.cnt;
+
     vector<vector<int>> permutations(bucket.size());
     vector<vector<int>> bestpermutations = permutations;
+    vector<vector<product>> bestbucket = bucket;
     for (int i = 0; i < bucket.size(); i++) {
         permutations[i].resize(bucket[i].size());
         iota(permutations[i].begin(), permutations[i].end(), 0);
@@ -249,14 +263,86 @@ int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int
 
     bestanswers = answers;
     long double t = 1;
-    for (int zigzig = 0; zigzig < 10000; zigzig++) {
+    for (int zigzig = 0; zigzig < 100000; zigzig++) {
         t *= 0.999;
-        mutation_reversing_path(permutations, bucket, answers, bestanswers, bestpermutations, t, rows, sections,
-                                block_x,
-                                block_y);
 
-        mutation_swapping_path(permutations, bucket, answers, bestanswers, bestpermutations, t, rows, sections, block_x,
-                               block_y);
+        for (int i = 0; i < bucket.size(); i++) {
+            pair<int, int> swapping = mutation_swapping_path(permutations[i]);
+
+            int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
+            if (cur < answers[i] || rnd2() < exp((long double) (answers[i] - cur) / t)) {
+                if (cur < bestanswers[i]) {
+                    bestanswers[i] = cur;
+                    bestpermutations[i] = permutations[i];
+                }
+                answers[i] = cur;
+            } else
+                swap(permutations[i][swapping.first], permutations[i][swapping.second]);
+        }
+
+        for (int i = 0; i < bucket.size(); i++) {
+            pair<int, int> flipping = mutation_flipping_path(permutations[i]);
+
+            int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
+            if (cur < answers[i] || rnd2() < exp((long double) (answers[i] - cur) / t)) {
+                if (cur < bestanswers[i]) {
+                    bestanswers[i] = cur;
+                    bestpermutations[i] = permutations[i];
+                }
+                answers[i] = cur;
+            } else {
+                reverse(permutations[i].begin() + flipping.first, permutations[i].begin() + flipping.second + 1);
+            }
+        }
+
+        for (int i = 0; i < bucket.size(); i++) {
+            auto changing = mutation_changing_cell(bucket[i], product_position, used);
+            if (changing.chosen == -1) continue;
+            int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
+            if (cur < answers[i] || rnd2() < exp((long double) (answers[i] - cur) / t)) {
+                if (cur < bestanswers[i]) {
+                    bestanswers[i] = cur;
+                    bestbucket[i] = bucket[i];
+                    bestpermutations[i] = permutations[i];
+                }
+                answers[i] = cur;
+            } else {
+                used[changing.rep.p] -= changing.rep.cnt;
+                used[changing.cur.p] += changing.cur.cnt;
+                bucket[i][changing.chosen] = changing.rep;
+            }
+        }
+
+        for (int i = 0; i < bucket.size(); i++) {
+            changing_bucket changing = mutation_changing_bucket(bucket, bucket_capacity, permutations, i);
+            if (changing.up == -1) continue;
+            int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
+            int cur2 = calc(permutations[changing.chosen], bucket[changing.chosen], rows, sections, block_x, block_y);
+            if (cur + cur2 < answers[i] + answers[changing.chosen] ||
+                rnd2() < exp((long double) (answers[i] + answers[changing.chosen] - cur - cur2) / t)) {
+                if (cur < bestanswers[i]) {
+                    bestanswers[i] = cur;
+                    bestbucket[i] = bucket[i];
+                    bestbucket[changing.chosen] = bucket[changing.chosen];
+                    bestpermutations[i] = permutations[i];
+                    bestpermutations[changing.chosen] = permutations[changing.chosen];
+                }
+                answers[i] = cur;
+                answers[changing.chosen] = cur2;
+            } else {
+                product was_erased = bucket[changing.chosen].back();
+                bucket[changing.chosen].pop_back();
+                permutations[changing.chosen].pop_back();
+                bucket_capacity[i] += was_erased.cnt;
+                bucket_capacity[changing.chosen] -= was_erased.cnt;
+                for (auto &j: permutations[i])
+                    if (j >= changing.up)
+                        j++;
+                permutations[i].insert(permutations[i].begin() + changing.pr, changing.up);
+                bucket[i].insert(bucket[i].begin() + changing.pr, was_erased);
+            }
+        }
+
     }
     int res = 0;
     for (int i = 0; i < bucket.size(); i++) res += bestanswers[i];
@@ -338,10 +424,7 @@ signed main() {
                 }
             }
         }
-        all_result += solve_batch(cells, floors, rows, sections, block_x, block_y);
+        all_result += solve_batch(cells, product_position, used, floors, rows, sections, block_x, block_y);
     }
     cout << all_result;
 }
-/*
-Не оптимальное разбиение заказов на батчи
- */

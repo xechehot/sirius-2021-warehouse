@@ -90,6 +90,7 @@ int get_distance(position now, position next, int rows, int sections) {
 
 const int FLOORS = 5, BLOCK_X = 5, BLOCK_Y = 5, ROWS = 20, SECTIONS = 20, MAX_CAPACITY = 32;
 
+
 int calc(vector<int> &permutation, vector<product> &items, int rows, int sections,
          int block_x, int block_y) {
     if (permutation.empty()) return 0;
@@ -120,6 +121,39 @@ void print(product a) {
     cout << "\n\n\n";
 }
 
+void mutation_swapping_path(vector<vector<int>> &permutations, vector<vector<product>> &bucket, vector<int> &answers,
+                            vector<int> &bestanswers, vector<vector<int>> &bestpermutations, long double t, int rows,
+                            int sections,
+                            int block_x, int block_y) {
+    for (int i = 0; i < permutations.size(); i++) {
+        int a = rnd() % permutations[i].size();
+        int b = rnd() % permutations[i].size();
+        if (a == b) continue;
+        swap(permutations[i][a], permutations[i][b]);
+        bool ok = false;
+        int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
+        if (cur < answers[i] || rnd2() < exp((long double) (answers[i] - cur) / t)) {
+            if (cur < bestanswers[i]) {
+                bestanswers[i] = cur;
+                bestpermutations[i] = permutations[i];
+            }
+            answers[i] = cur;
+            ok = true;
+        }
+        if (!ok) swap(permutations[i][a], permutations[i][b]);
+    }
+}
+
+
+void print_bucket(vector<vector<product>> &bucket, vector<vector<int>> &bestpermutations, int res) {
+    cout << res << "\n";
+    for (int i = 0; i < bucket.size(); i++) {
+        for (int j = 0; j < bucket[i].size(); j++)
+            print(bucket[i][bestpermutations[i][j]]);
+        cout << "------------------------------\n";
+    }
+}
+
 int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int block_x,
                 int block_y) {
     if (cells2.empty()) return 0;
@@ -140,15 +174,26 @@ int solve_batch(vector<product> &cells2, int floors, int rows, int sections, int
         }
         if (!cur_bucket.empty()) bucket.push_back(cur_bucket);
     }
-    int res = 0;
-    for (auto &cur_bucket: bucket) {
-        vector<int> permutation(cur_bucket.size());
-        iota(permutation.begin(), permutation.end(), 0);
-        for (auto j: cur_bucket)
-            print(j);
-        cout << "---------------------\n";
-        res += calc(permutation, cur_bucket, rows, sections, block_x, block_y);
+    vector<vector<int>> permutations(bucket.size());
+    vector<vector<int>> bestpermutations = permutations;
+    for (int i = 0; i < bucket.size(); i++) {
+        permutations[i].resize(bucket[i].size());
+        iota(permutations[i].begin(), permutations[i].end(), 0);
     }
+
+    vector<int> answers(bucket.size()), bestanswers;
+    for (int i = 0; i < bucket.size(); i++)
+        answers[i] = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
+    bestanswers = answers;
+    long double t = 1;
+    for (int zigzig = 0; zigzig < 10000; zigzig++) {
+        t *= 0.999;
+        mutation_swapping_path(permutations, bucket, answers, bestanswers, bestpermutations, t, rows, sections, block_x,
+                               block_y);
+    }
+    int res = 0;
+    for (int i = 0; i < bucket.size(); i++) res += bestanswers[i];
+//    print_bucket(bucket, bestpermutations, res);
     return res;
 }
 

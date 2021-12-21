@@ -25,11 +25,15 @@ class DistChecker(object):
         ans = 0
         if p1['block_x'] != p2['block_x'] or p1['block_y'] != p2['block_y'] or p1['row'] != p2['row']:
             if p1['block_x'] > p2['block_x']: p1, p2 = p2, p1
-            ans += (p2['block_x'] - p1['block_x']) * (self.sections + 2)
-            ans += min(p1['section'] + p2['section'] + 2, 2 * self.sections - p1['section'] - p2['section'] + 2)
+            if p1['block_x'] != p2['block_x']:
+                ans += (p2['block_x'] - p1['block_x'] - 1) * self.sections
+            ans += (p2['block_x'] - p1['block_x']) * 2 - 1
+            ans += min(p1['section'] + p2['section'], 2 * self.sections - p1['section'] - p2['section'] + 2)
             if p1['block_y'] > p2['block_y']: p1, p2 = p2, p1
-            ans += (self.rows - p1['row']) + p2['row']
-            ans += (p2['block_y'] - p1['block_y'] - 1) * (self.rows + 2) + 2
+            ans += (self.rows - p1['row'] + 1) + p2['row']
+            if p1['block_y'] != p2['block_y']:
+                ans += (p2['block_y'] - p1['block_y'] - 1) * self.rows
+            ans += (p2['block_y'] - p1['block_y']) * 2 - 1
             return ans
         else:
             return abs(p1['section'] - p2['section'])

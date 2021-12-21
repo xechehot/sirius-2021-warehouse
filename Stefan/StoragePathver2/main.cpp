@@ -1,4 +1,9 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <map>
+#include <random>
+#include <chrono>
 #include <nlohmann/json.hpp>
 
 
@@ -234,9 +239,10 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         vector<product> cur_bucket;
         int cur_capacity = MAX_CAPACITY;
         for (int j = 0; j < cells[i].size(); j++) {
-            if (cur_capacity >= cells[i][j].cnt)
+            if (cur_capacity >= cells[i][j].cnt) {
                 cur_bucket.push_back(cells[i][j]);
-            else {
+                cur_capacity -= cells[i][j].cnt;
+            } else {
                 bucket.push_back(cur_bucket);
                 cur_bucket = {cells[i][j]};
                 cur_capacity = MAX_CAPACITY - cells[i][j].cnt;
@@ -263,10 +269,11 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
 
     bestanswers = answers;
     long double t = 1;
-    for (int zigzig = 0; zigzig < 100000; zigzig++) {
+    for (int zigzig = 0; zigzig < 30000; zigzig++) {
         t *= 0.999;
 
         for (int i = 0; i < bucket.size(); i++) {
+            if (permutations[i].empty()) continue;
             pair<int, int> swapping = mutation_swapping_path(permutations[i]);
 
             int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
@@ -281,6 +288,8 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         }
 
         for (int i = 0; i < bucket.size(); i++) {
+            if (permutations[i].empty()) continue;
+
             pair<int, int> flipping = mutation_flipping_path(permutations[i]);
 
             int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
@@ -296,6 +305,7 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         }
 
         for (int i = 0; i < bucket.size(); i++) {
+            if (bucket[i].empty()) continue;
             auto changing = mutation_changing_cell(bucket[i], product_position, used);
             if (changing.chosen == -1) continue;
             int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
@@ -314,6 +324,7 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         }
 
         for (int i = 0; i < bucket.size(); i++) {
+            if (bucket[i].empty()) continue;
             changing_bucket changing = mutation_changing_bucket(bucket, bucket_capacity, permutations, i);
             if (changing.up == -1) continue;
             int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
@@ -346,7 +357,7 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
     }
     int res = 0;
     for (int i = 0; i < bucket.size(); i++) res += bestanswers[i];
-    //print_bucket(bucket, bestpermutations, res);
+//    print_bucket(bucket, bestpermutations, res);
     return res;
 }
 
@@ -384,9 +395,13 @@ signed main() {
     map<int, vector<product>> product_position;
     map<position, int> used;
     vector<vector<item>> orders(data["orders"].size());
-    for (int i = 0; i < orders.size(); i++)
-        for (int j = 0; j < data["orders"][i]["items"].size(); j++)
+    int cntt = 0;
+    for (int i = 0; i < orders.size(); i++) {
+        cntt += data["orders"][i]["items"].size();
+        for (int j = 0; j < data["orders"][i]["items"].size(); j++) {
             orders[i].push_back({data["orders"][i]["items"][j]["id"], data["orders"][i]["items"][j]["count"]});
+        }
+    }
     vector<product> products(data["warehouse"]["stock"].size());
     for (int i = 0; i < products.size(); i++) {
         products[i].id = data["warehouse"]["stock"][i]["id"];
@@ -426,5 +441,5 @@ signed main() {
         }
         all_result += solve_batch(cells, product_position, used, floors, rows, sections, block_x, block_y);
     }
-    cout << all_result;
+    cout << (long double) all_result / cntt;
 }

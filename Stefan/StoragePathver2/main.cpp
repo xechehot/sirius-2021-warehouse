@@ -176,9 +176,9 @@ changing_cell mutation_changing_cell(vector<product> &bucket, map<int, vector<pr
     product cur = bucket[chosen_cell];
     vector<product> candidat;
     for (product j: product_position[cur.id])
-        if (j.p.floor == cur.p.floor && j != cur && j.cnt - used[cur.p] >= cur.cnt)
+        if (j.p.floor == cur.p.floor && j.p != cur.p && j.cnt - used[j.p] >= cur.cnt)
             candidat.push_back(j);
-    product useless = {-1, -1, -1, -1, -1, -1, -1};
+    product useless = {-1, {-1, -1, -1, -1, -1}, -1};
     if (candidat.empty()) return {-1, useless, useless};
     product chosen = candidat[rnd() % candidat.size()];
     product rep = cur;
@@ -271,17 +271,59 @@ mutation_merging_bucket(vector<vector<product>> &bucket, vector<vector<int>> &pe
     return res;
 }
 
+
+struct transfer {
+    int chosen, chosen2, taken;
+};
+
+transfer
+mutation_transfering_bucket(vector<product> &bucket, map<position, int> &used, map<position, int> &product_cnt) {
+    if (bucket.empty()) return {-1, -1, -1};
+    vector<int> candidats;
+    int chosen = -1;
+    for (int iter = 0; iter < 50; iter++) {
+        int cur_chosen = rnd() % (int) bucket.size();
+        if (bucket[cur_chosen].cnt != 0) {
+            chosen = cur_chosen;
+            break;
+        }
+    }
+    if (chosen == -1)
+        return {-1, -1, -1};
+    for (int i = 0; i < bucket.size(); i++) {
+        if (i == chosen) continue;
+        if (bucket[i].id != bucket[chosen].id || product_cnt[bucket[i].p] - used[bucket[i].p] == 0) continue;
+        candidats.push_back(i);
+    }
+    if (candidats.empty()) return {-1, -1, -1};
+    int chosen2 = candidats[rnd() % (int) candidats.size()];
+    int mx = min(bucket[chosen].cnt, product_cnt[bucket[chosen2].p] - used[bucket[chosen2].p]);
+    mx = min(mx, 4);
+    assert(mx > 0);
+    int taken = rnd() % mx + 1;
+    bucket[chosen].cnt -= taken;
+    bucket[chosen2].cnt += taken;
+    used[bucket[chosen].p] -= taken;
+    used[bucket[chosen2].p] += taken;
+    assert(bucket[chosen].cnt >= 0);
+    assert(bucket[chosen2].cnt >= 0);
+    transfer res = {chosen, chosen2, taken};
+    return res;
+}
+
+
 json data_res;
+json batch;
 
 
 void print_bucket(vector<vector<product>> &bucket, vector<vector<int>> &bestpermutations) {
     for (int i = 0; i < bucket.size(); i++) {
-        json cur;
-        cur["buckets"] = {};
+        json basket;
+        basket["bucket"] = {};
         for (int j = 0; j < bucket[i].size(); j++) {
             assert(bestpermutations[i].size() == bucket[i].size());
             assert(bucket[i][bestpermutations[i][j]].cnt >= 0);
-            json cur2 = {
+            json cur = {
                     {"id",      bucket[i][bestpermutations[i][j]].id},
                     {"floor",   bucket[i][bestpermutations[i][j]].p.floor},
                     {"block_x", bucket[i][bestpermutations[i][j]].p.block_x},
@@ -289,17 +331,19 @@ void print_bucket(vector<vector<product>> &bucket, vector<vector<int>> &bestperm
                     {"row",     bucket[i][bestpermutations[i][j]].p.row},
                     {"section", bucket[i][bestpermutations[i][j]].p.section},
                     {"cnt",     bucket[i][bestpermutations[i][j]].cnt}};
-            cur["buckets"].push_back(cur2);
-//            print(bucket[i][bestpermutations[i][j]]);
+            basket["bucket"].push_back(cur);
         }
-        data_res["order"].push_back(cur);
-//        cout << "------------------------------\n";
+        if (!basket["bucket"].empty())
+            batch["batch"].push_back(basket);
+
+        //        cout << "------------------------------\n";
     }
 }
 
 
 int
-solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position, map<position, int> &used, int floors,
+solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position, map<position, int> &used,
+            map<position, int> &product_cnt, int floors,
             int rows, int sections, int block_x,
             int block_y, int type) {
     if (cells2.empty()) return 0;
@@ -343,6 +387,26 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
     long double t = 1;
     for (int zigzig = 0; zigzig < 900; zigzig++) {
         t *= 0.99;
+
+        for (int i = 0; i < bucket.size(); i++) {
+            if (bucket[i].empty()) continue;
+            transfer trans = mutation_transfering_bucket(bucket[i], used, product_cnt);
+            if (trans.chosen == -1) continue;
+            int cur = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
+            if (cur < answers[i] || rnd2() < exp((long double) (answers[i] - cur) / t)) {
+                if (cur < bestanswers[i]) {
+                    bestanswers[i] = cur;
+                    bestpermutations[i] = permutations[i];
+                    bestbucket[i] = bucket[i];
+                }
+                answers[i] = cur;
+            } else {
+                bucket[i][trans.chosen].cnt += trans.taken;
+                bucket[i][trans.chosen2].cnt -= trans.taken;
+                used[bucket[i][trans.chosen].p] += trans.taken;
+                used[bucket[i][trans.chosen2].p] -= trans.taken;
+            }
+        }
 
         for (int i = 0; i < bucket.size(); i++) {
             if (permutations[i].empty()) continue;
@@ -506,7 +570,7 @@ bool cmp(pair<int, int> a, pair<int, int> b) {
 
 
 signed main() {
-    freopen("../../../data_sample/sample_1600_1.json", "r", stdin);
+    freopen("../../../data_sample/sample_3200_4.json", "r", stdin);
     freopen("../../../data_sample/output.json", "w", stdout);
     json data;
     cin >> data;
@@ -517,6 +581,7 @@ signed main() {
     int rows = data["warehouse"]["meta"]["rows"];
     int sections = data["warehouse"]["meta"]["sections"];
     map<int, vector<product>> product_position;
+    map<position, int> product_cnt;
     map<position, int> used;
     vector<vector<item>> orders(data["orders"].size());
     int cntt = 0;
@@ -536,6 +601,7 @@ signed main() {
         products[i].p.section = data["warehouse"]["stock"][i]["p"]["section"];
         products[i].cnt = data["warehouse"]["stock"][i]["count"];
         product_position[products[i].id].push_back(products[i]);
+        product_cnt[products[i].p] = products[i].cnt;
     }
     for (auto &i: product_position)
         sort(i.second.begin(), i.second.end());
@@ -556,7 +622,7 @@ signed main() {
             int rem = cnt;
             for (auto &j: product_position[id]) {
                 int mi = min(rem, j.cnt - used[j.p]);
-                rem -= j.cnt;
+                rem -= mi;
                 auto need = j;
                 need.cnt = mi;
                 order2.push_back(need);
@@ -589,7 +655,8 @@ signed main() {
         for (int j = i; j < min((int) orders2.size(), i + batch_size); j++)
             for (auto &k: orders2[j])
                 cells[tt].push_back(k);
-        answers[tt] = solve_batch(cells[tt], product_position, used, floors, rows, sections, block_x, block_y, 1);
+        answers[tt] = solve_batch(cells[tt], product_position, used, product_cnt, floors, rows, sections, block_x,
+                                  block_y, 1);
         tt++;
     }
     vector<int> bestanswers = answers;
@@ -598,12 +665,14 @@ signed main() {
 
 
     if (tt > 1) {
-        for (int zigzag = 0; zigzag < 10; zigzag++) {
+        for (int zigzag = 0; zigzag < 20; zigzag++) {
             t *= 0.99;
             for (int i = 0; i < tt; i++) {
                 swapping_batch swapping = mutation_swapping_batch(cells, i);
-                int cur = solve_batch(cells[i], product_position, used, floors, rows, sections, block_x, block_y, 1);
-                int cur2 = solve_batch(cells[swapping.chosen2], product_position, used, floors, rows, sections, block_x,
+                int cur = solve_batch(cells[i], product_position, used, product_cnt, floors, rows, sections, block_x,
+                                      block_y, 1);
+                int cur2 = solve_batch(cells[swapping.chosen2], product_position, used, product_cnt, floors, rows,
+                                       sections, block_x,
                                        block_y, 1);
                 if (cur + cur2 < answers[i] + answers[swapping.chosen2] ||
                     exp((long double) (answers[i] + answers[swapping.chosen2] - cur - cur2) / t)) {
@@ -621,9 +690,15 @@ signed main() {
             }
         }
     }
-    data_res["order"] = {};
-    for (int i = 0; i < tt; i++)
-        int cur = solve_batch(bestcells[i], product_position, used, floors, rows, sections, block_x, block_y, 2);
+    data_res = {};
+    for (int i = 0; i < tt; i++) {
+        batch.clear();
+        batch["batch"] = {};
+        int cur = solve_batch(bestcells[i], product_position, used, product_cnt, floors, rows, sections, block_x,
+                              block_y, 2);
+        if (!batch["batch"].empty())
+            data_res.push_back(batch);
+    }
     int res = 0;
     cout << data_res;
     //

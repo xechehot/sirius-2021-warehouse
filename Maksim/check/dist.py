@@ -23,13 +23,16 @@ class DistChecker(object):
 
     def get_dist_2_places(self, p1, p2):
         ans = 0
-        if (p1['block_x'] > p2['block_x']): p1, p2 = p2, p1
-        ans += (p2['block_x'] - p1['block_x']) * (self.sections + 2)
-        ans += min(p1['section'] + p2['section'] + 2, 2 * self.sections - p1['section'] - p2['section'] + 2)
-        if (p1['block_y'] > p2['block_y']): p1, p2 = p2, p1
-        ans += (self.rows - p1['row']) + p2['row']
-        ans += (p2['block_y'] - p1['block_y'] - 1) * (self.rows + 2) + 2
-        return ans
+        if p1['block_x'] != p2['block_x'] or p1['block_y'] != p2['block_y'] or p1['row'] != p2['row']:
+            if p1['block_x'] > p2['block_x']: p1, p2 = p2, p1
+            ans += (p2['block_x'] - p1['block_x']) * (self.sections + 2)
+            ans += min(p1['section'] + p2['section'] + 2, 2 * self.sections - p1['section'] - p2['section'] + 2)
+            if p1['block_y'] > p2['block_y']: p1, p2 = p2, p1
+            ans += (self.rows - p1['row']) + p2['row']
+            ans += (p2['block_y'] - p1['block_y'] - 1) * (self.rows + 2) + 2
+            return ans
+        else:
+            return abs(p1['section'] - p2['section'])
 
     def get_normal_dist(self, path):
         ans = 0

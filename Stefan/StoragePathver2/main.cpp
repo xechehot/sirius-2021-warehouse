@@ -70,7 +70,7 @@ int get_distance_in_one_block(position now, position next, int sections) {
     if (now.row == next.row)
         return abs(next.section - now.section);
     int res = abs(next.row - now.row);
-    res += min(next.section + now.section, sections - now.section + 1 + sections - next.section + 1);
+    res += min(next.section + now.section, sections - now.section + sections - next.section);
     return res;
 }
 
@@ -81,7 +81,7 @@ int get_distance(position now, position next, int rows, int sections) {
         return get_distance_in_one_block(now, next, sections);
     if (now.block_x == next.block_x) {
         if (now.block_y > next.block_y) swap(now, next);
-        int res = now.section + sections - next.section + 1;
+        int res = now.section + sections - next.section;
         res += (next.block_y - now.block_y - 1) * sections + (next.block_y - now.block_y) * 2;
         res += abs(next.row - now.row);
         return res;
@@ -89,7 +89,7 @@ int get_distance(position now, position next, int rows, int sections) {
         if (now.block_x > next.block_x) swap(now, next);
         int res = rows - now.block_x + next.block_x;
         res += (next.block_x - now.block_x - 1) * rows + 2 * (next.block_x - now.block_x);
-        res += min(next.section + now.section, sections - now.section + 1 + sections - next.section + 1);
+        res += min(next.section + now.section, sections - now.section + sections - next.section);
         return res;
     } else {
         int res = 0;
@@ -102,10 +102,10 @@ int get_distance(position now, position next, int rows, int sections) {
         }
 
         if (now.block_y < next.block_y) {
-            res += now.section + sections - next.section + 1;
+            res += now.section + sections - next.section;
             res += (next.block_y - now.block_y - 1) * sections + (next.block_y - now.block_y) * 2;
         } else {
-            res += next.section + sections - now.section + 1;
+            res += next.section + sections - now.section;
             res += (now.block_y - next.block_y - 1) * sections + (now.block_y - next.block_y) * 2;
         }
 
@@ -142,8 +142,8 @@ int calc(vector<int> &permutation, vector<product> &items, int rows, int section
 void print(product a) {
     cout << "id: " << a.id << '\n';
     cout << "floor: " << a.p.floor << '\n';
-    cout << "block_x: " << a.p.block_x << '\n';
-    cout << "block_y: " << a.p.block_y << '\n';
+    cout << "block_x: " << a.p.block_y << '\n';
+    cout << "block_y: " << a.p.block_x << '\n';
     cout << "row: " << a.p.row << '\n';
     cout << "section: " << a.p.section << '\n';
     cout << "count: " << a.cnt << '\n';
@@ -512,8 +512,8 @@ signed main() {
     cin >> data;
     int batch_size = data["batch_size"];
     int floors = data["warehouse"]["meta"]["floors"];
-    int block_x = data["warehouse"]["meta"]["block_x"];
-    int block_y = data["warehouse"]["meta"]["block_y"];
+    int block_x = data["warehouse"]["meta"]["block_y"];
+    int block_y = data["warehouse"]["meta"]["block_x"];
     int rows = data["warehouse"]["meta"]["rows"];
     int sections = data["warehouse"]["meta"]["sections"];
     map<int, vector<product>> product_position;
@@ -530,8 +530,8 @@ signed main() {
     for (int i = 0; i < products.size(); i++) {
         products[i].id = data["warehouse"]["stock"][i]["id"];
         products[i].p.floor = data["warehouse"]["stock"][i]["p"]["floor"];
-        products[i].p.block_x = data["warehouse"]["stock"][i]["p"]["block_x"];
-        products[i].p.block_y = data["warehouse"]["stock"][i]["p"]["block_y"];
+        products[i].p.block_x = data["warehouse"]["stock"][i]["p"]["block_y"];
+        products[i].p.block_y = data["warehouse"]["stock"][i]["p"]["block_x"];
         products[i].p.row = data["warehouse"]["stock"][i]["p"]["row"];
         products[i].p.section = data["warehouse"]["stock"][i]["p"]["section"];
         products[i].cnt = data["warehouse"]["stock"][i]["count"];
@@ -626,6 +626,7 @@ signed main() {
         int cur = solve_batch(bestcells[i], product_position, used, floors, rows, sections, block_x, block_y, 2);
     int res = 0;
     cout << data_res;
+    //
 //    for (auto i: bestanswers) res += i;
 //    cout << (long double) res / cntt;
 }

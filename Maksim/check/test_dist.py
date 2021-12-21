@@ -116,7 +116,7 @@ def test_batch_size_dist():
                             {
                                 "block_x": 1,
                                 "block_y": 2,
-                                "cnt": 1,
+                                "cnt": 2,
                                 "floor": 1,
                                 "id": 68542596,
                                 "row": 19,
@@ -139,3 +139,4 @@ def test_batch_size_dist():
     }
     assert dist_checker.get_batch_dist(result['batches'][0]) == 111
     assert dist_checker.get_batches_dist(result) == 111
+    assert dist_checker.get_total_items(result) == 3

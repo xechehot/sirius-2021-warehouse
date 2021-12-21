@@ -193,7 +193,7 @@ changing_bucket mutation_changing_bucket(vector<vector<product>> &bucket, vector
                                          vector<vector<int>> &permutations, int chosen) {
     int pr = rnd() % (int) bucket[chosen].size();
     vector<int> candidats;
-    for (int iter = 0; iter < 50; iter++) {
+    for (int iter = 0; iter < 100; iter++) {
         int x2 = rnd() % (int) bucket.size();
         if (chosen == x2) continue;
         if (bucket_capacity[x2] + bucket[chosen][pr].cnt <= MAX_CAPACITY) {
@@ -215,6 +215,23 @@ changing_bucket mutation_changing_bucket(vector<vector<product>> &bucket, vector
         }
     }
     return {-1, -1, -1};
+}
+
+struct swapping_batch {
+    int chosen, chosen2, pr, pr2;
+};
+
+swapping_batch
+mutation_swapping_batch(vector<vector<product>> &batch, int chosen) {
+    int chosen2 = chosen;
+    while (true) {
+        chosen2 = rnd() % (int) batch.size();
+        if (chosen2 != chosen) break;
+    }
+    int pr = rnd() % ((int) batch[chosen].size());
+    int pr2 = rnd() % ((int) batch[chosen2].size());
+    swap(batch[chosen][pr], batch[chosen2][pr2]);
+    return {chosen, chosen2, pr, pr2};
 }
 
 
@@ -269,8 +286,8 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
 
     bestanswers = answers;
     long double t = 1;
-    for (int zigzig = 0; zigzig < 30000; zigzig++) {
-        t *= 0.999;
+    for (int zigzig = 0; zigzig < 1050; zigzig++) {
+        t *= 0.99;
 
         for (int i = 0; i < bucket.size(); i++) {
             if (permutations[i].empty()) continue;
@@ -381,6 +398,11 @@ void parse(vector<item> &items) {
     items = items2;
 }
 
+map<pair<int, int>, vector<vector<product>>> popular;
+
+bool cmp(pair<int, int> a, pair<int, int> b) {
+    return popular[a].size() > popular[b].size();
+}
 
 signed main() {
     freopen("../../../data_sample/sample_1600_1.json", "r", stdin);
@@ -397,9 +419,9 @@ signed main() {
     vector<vector<item>> orders(data["orders"].size());
     int cntt = 0;
     for (int i = 0; i < orders.size(); i++) {
-        cntt += data["orders"][i]["items"].size();
         for (int j = 0; j < data["orders"][i]["items"].size(); j++) {
             orders[i].push_back({data["orders"][i]["items"][j]["id"], data["orders"][i]["items"][j]["count"]});
+            cntt += (int) data["orders"][i]["items"][j]["count"];
         }
     }
     vector<product> products(data["warehouse"]["stock"].size());
@@ -415,17 +437,19 @@ signed main() {
     }
     for (auto &i: product_position)
         sort(i.second.begin(), i.second.end());
+    vector<vector<product>> cells;
+    int tt = 0;
+    vector<int> answers;
 
-    int all_result = 0;
-    for (int i = 0; i < orders.size(); i += batch_size) {
+
+    for (int i = 0; i < orders.size(); i++) {
         vector<item> order;
-        for (int j = i; j < min((int) orders.size(), i + batch_size); j++)
-            for (auto[id, cnt]: orders[j])
-                order.push_back({id, cnt});
+        for (auto[id, cnt]: orders[i])
+            order.push_back({id, cnt});
         sort(order.begin(), order.end());
         parse(order);
-
-        vector<product> cells;
+        map<pair<int, int>, int> popular_in_order;
+        vector<product> order2;
         for (auto[id, cnt]: order) {
             int rem = cnt;
             for (auto &j: product_position[id]) {
@@ -434,12 +458,68 @@ signed main() {
                     rem -= j.cnt;
                     auto need = j;
                     need.cnt = mi;
-                    cells.push_back(need);
+                    order2.push_back(need);
+                    popular_in_order[{need.p.block_x, need.p.block_y}]++;
                     used[j.p] += mi;
                 }
             }
         }
-        all_result += solve_batch(cells, product_position, used, floors, rows, sections, block_x, block_y);
+        pair<int, int> most_popular_in_order = {-1, -1};
+        for (auto j: popular_in_order)
+            if (most_popular_in_order.first == -1 || j.second > popular_in_order[most_popular_in_order])
+                most_popular_in_order = j.first;
+        popular[most_popular_in_order].push_back(order2);
     }
-    cout << (long double) all_result / cntt;
+    vector<pair<int, int>> blocks;
+    for (int i = 1; i <= block_x; i++)
+        for (int j = 1; j <= block_y; j++)
+            blocks.push_back({i, j});
+    sort(blocks.begin(), blocks.end(), cmp);
+
+    vector<vector<product>> orders2;
+    for (auto block: blocks)
+        for (auto &j: popular[block])
+            orders2.push_back(j);
+
+    for (int i = 0; i < orders2.size(); i += batch_size) {
+        cells.push_back({});
+        answers.push_back(0);
+        for (int j = i; j < min((int) orders2.size(), i + batch_size); j++)
+            for (auto &k: orders2[j])
+                cells[tt].push_back(k);
+        answers[tt] = solve_batch(cells[tt], product_position, used, floors, rows, sections, block_x, block_y);
+        tt++;
+    }
+    vector<int> bestanswers = answers;
+    vector<vector<product>> bestcells = cells;
+    long double t = 1 / 100.0;
+
+
+    if (tt > 1) {
+        for (int zigzag = 0; zigzag < 10; zigzag++) {
+            t *= 0.99;
+            for (int i = 0; i < tt; i++) {
+                swapping_batch swapping = mutation_swapping_batch(cells, i);
+                int cur = solve_batch(cells[i], product_position, used, floors, rows, sections, block_x, block_y);
+                int cur2 = solve_batch(cells[swapping.chosen2], product_position, used, floors, rows, sections, block_x,
+                                       block_y);
+                if (cur + cur2 < answers[i] + answers[swapping.chosen2] ||
+                    exp((long double) (answers[i] + answers[swapping.chosen2] - cur - cur2) / t)) {
+                    if (cur + cur2 < bestanswers[i] + bestanswers[swapping.chosen2]) {
+                        bestanswers[i] = cur;
+                        bestanswers[swapping.chosen2] = cur2;
+                        bestcells[i] = cells[i];
+                        bestcells[swapping.chosen2] = cells[swapping.chosen2];
+                    }
+                    answers[i] = cur;
+                    answers[swapping.chosen2] = cur2;
+                } else {
+                    swap(cells[i][swapping.pr], cells[swapping.chosen2][swapping.pr2]);
+                }
+            }
+        }
+    }
+    int res = 0;
+    for (auto i: bestanswers) res += i;
+    cout << (long double) res / cntt;
 }

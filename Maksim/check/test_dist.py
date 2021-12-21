@@ -60,3 +60,20 @@ def test_two_sku_block():
     assert dist_2_point == 7
     ans = dist_checker.get_normal_dist(path)
     assert ans == 42
+
+
+def test_onw_sku_2_blocks():
+    dist_checker = DistChecker(block_x=2,
+                               block_y=2,
+                               rows=20,
+                               sections=10)
+    path = [
+        (dict(
+            block_x=2,
+            block_y=1,
+            row=10,
+            section=2
+        ),)
+    ]
+    ans = dist_checker.get_normal_dist(path)
+    assert ans == 66

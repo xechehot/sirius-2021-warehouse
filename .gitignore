@@ -1070,3 +1070,8 @@ dkms.conf
 *.exe
 *.out
 *.app
+/.idea/.name
+/Maksim/.idea/.gitignore
+/Maksim/.idea/inspectionProfiles/profiles_settings.xml
+/Maksim/.idea/misc.xml
+/Maksim/.idea/modules.xml

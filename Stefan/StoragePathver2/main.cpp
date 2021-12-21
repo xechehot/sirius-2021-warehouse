@@ -626,6 +626,7 @@ signed main() {
         int cur = solve_batch(bestcells[i], product_position, used, floors, rows, sections, block_x, block_y, 2);
     int res = 0;
     cout << data_res;
+    //
 //    for (auto i: bestanswers) res += i;
 //    cout << (long double) res / cntt;
 }

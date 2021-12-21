@@ -1,0 +1,35 @@
+{
+  "batch_size": 10,
+  "warehouse": {
+    "meta": {
+      "floors": 1,
+      "block_x": 1,
+      "block_y": 2,
+      "rows": 20,
+      "sections": 10
+    },
+    "stock": [
+      {
+        "id": 1,
+        "p": {
+          "floor": 1,
+          "block_x": 1,
+          "block_y": 1,
+          "row": 10,
+          "section": 2
+        },
+        "count": 1
+      }
+    ]
+  },
+  "orders": [
+    {
+      "items": [
+        {
+          "id": 1,
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

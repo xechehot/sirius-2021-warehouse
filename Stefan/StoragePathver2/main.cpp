@@ -578,8 +578,8 @@ bool cmp(pair<int, int> a, pair<int, int> b) {
 
 
 signed main() {
-    freopen("../../../data_sample/sample_3200_2.json", "r", stdin);
-    freopen("../../../data_sample/output.json", "w", stdout);
+    freopen("../../../data_sample/sample_3200_4.json", "r", stdin);
+//    freopen("../../../data_sample/output.json", "w", stdout);
     json data;
     cin >> data;
     int batch_size = data["batch_size"];
@@ -673,7 +673,7 @@ signed main() {
 
 
     if (tt > 1) {
-        for (int zigzag = 0; zigzag < 20; zigzag++) {
+        for (int zigzag = 0; zigzag < 30; zigzag++) {
             t *= 0.9999;
             for (int i = 0; i < tt; i++) {
                 swapping_batch swapping = mutation_swapping_batch(cells, i);
@@ -706,8 +706,8 @@ signed main() {
     }
     int res = 0;
     for (auto i: bestanswers) res += i;
-//    cout << (long double) res / cntt;
-    cout << data_res;
+    cout << (long double) res / cntt;
+//    cout << data_res;
 
 }
 

@@ -36,8 +36,11 @@ class DistChecker(object):
 
     def get_normal_dist(self, path):
         ans = 0
-        ans += self.dist_to_start(path[0][0]) + self.dist_to_start(path[-1][0])
-        ans += self.dist_to_tape(path[-1][0]) * 2
+        ans += self.dist_to_start(path[0]) + self.dist_to_start(path[-1])
+        ans += self.dist_to_tape(path[-1]) * 2
         for i in range(len(path) - 1):
-            ans += self.get_dist_2_places(path[i][0], path[i + 1][0])
+            ans += self.get_dist_2_places(path[i], path[i + 1])
         return ans
+
+    def get_batch_dist(self, batch):
+        pass

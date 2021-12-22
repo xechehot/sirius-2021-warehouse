@@ -47,4 +47,10 @@ class DistChecker(object):
         return ans
 
     def get_batch_dist(self, batch):
-        pass
+        total_dist = 0
+        for bucket in batch['buckets']:
+            total_dist += self.get_normal_dist(bucket['items'])
+        return total_dist
+
+    def get_batches_dist(self, result):
+        return sum(self.get_batch_dist(b) for b in result['batches'])

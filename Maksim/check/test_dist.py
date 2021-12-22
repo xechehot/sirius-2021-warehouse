@@ -78,6 +78,7 @@ def test_onw_sku_2_blocks():
     ans = dist_checker.get_normal_dist(path)
     assert ans == 62
 
+
 def test_onw_sku_2_far_blocks():
     dist_checker = DistChecker(block_x=2,
                                block_y=2,
@@ -99,3 +100,42 @@ def test_onw_sku_2_far_blocks():
     ]
     ans = dist_checker.get_dist_2_places(path[0], path[1])
     assert ans == 8
+
+
+def test_batch_size_dist():
+    dist_checker = DistChecker(block_x=2,
+                               block_y=2,
+                               rows=20,
+                               sections=10)
+    result = {
+        "batches": [
+            {
+                "buckets": [
+                    {
+                        "items": [
+                            {
+                                "block_x": 1,
+                                "block_y": 2,
+                                "cnt": 1,
+                                "floor": 1,
+                                "id": 68542596,
+                                "row": 19,
+                                "section": 6
+                            },
+                            {
+                                "block_x": 1,
+                                "block_y": 2,
+                                "cnt": 1,
+                                "floor": 1,
+                                "id": 81522366,
+                                "row": 18,
+                                "section": 7
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+    assert dist_checker.get_batch_dist(result['batches'][0]) == 111
+    assert dist_checker.get_batches_dist(result) == 111

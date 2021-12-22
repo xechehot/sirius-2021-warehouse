@@ -386,10 +386,9 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         answers[i] = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
 
     bestanswers = answers;
-    long double t = 1;
-    for (int zigzig = 0; zigzig < 900; zigzig++) {
+    long double t = 100;
+    for (int zigzig = 0; zigzig < 2000; zigzig++) {
         t *= 0.9999;
-
         // перекладывание товаров из ячейки в ячейку
         for (int i = 0; i < bucket.size(); i++) {
             if (bucket[i].empty()) continue;
@@ -579,7 +578,7 @@ bool cmp(pair<int, int> a, pair<int, int> b) {
 
 
 signed main() {
-    freopen("../../../data_sample/sample_1600_1.json", "r", stdin);
+    freopen("../../../data_sample/sample_3200_2.json", "r", stdin);
     freopen("../../../data_sample/output.json", "w", stdout);
     json data;
     cin >> data;
@@ -670,12 +669,12 @@ signed main() {
     }
     vector<int> bestanswers = answers;
     vector<vector<product>> bestcells = cells;
-    long double t = 1 / 100.0;
+    long double t = 100;
 
 
     if (tt > 1) {
         for (int zigzag = 0; zigzag < 20; zigzag++) {
-            t *= 0.99;
+            t *= 0.9999;
             for (int i = 0; i < tt; i++) {
                 swapping_batch swapping = mutation_swapping_batch(cells, i);
                 int cur = solve_batch(cells[i], product_position, used, product_cnt, floors, rows, sections, block_x,
@@ -700,16 +699,15 @@ signed main() {
         }
     }
 
-    data_res;
     data_res["batches"] = {};
     for (int i = 0; i < tt; i++) {
         int cur = solve_batch(bestcells[i], product_position, used, product_cnt, floors, rows, sections, block_x,
                               block_y, 2);
     }
     int res = 0;
-    cout << data_res;
-    //
-//    for (auto i: bestanswers) res += i;
+    for (auto i: bestanswers) res += i;
 //    cout << (long double) res / cntt;
+    cout << data_res;
+
 }
 

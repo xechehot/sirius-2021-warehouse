@@ -67,76 +67,69 @@ struct product {
     }
 };
 
-int get_distance_in_one_block(position now, position next, int sections) {
-    if (now.row == next.row)
-        return abs(next.section - now.section);
-    int res = abs(next.row - now.row);
-    res += min(next.section + now.section, sections - now.section + sections - next.section);
-    return res;
-}
-
-int get_distance(position now, position next, int rows, int sections) {
-    now.row -= now.row % 2;
-    next.row -= next.row % 2;
-    if (now.block_x == next.block_x && now.block_y == next.block_y)
-        return get_distance_in_one_block(now, next, sections);
-    if (now.block_x == next.block_x) {
-        if (now.block_y > next.block_y) swap(now, next);
-        int res = now.section + sections - next.section;
-        res += (next.block_y - now.block_y - 1) * sections + (next.block_y - now.block_y) * 2;
-        res += abs(next.row - now.row);
-        return res;
-    } else if (now.block_y == next.block_y) {
-        if (now.block_x > next.block_x) swap(now, next);
-        int res = rows - now.block_x + next.block_x;
-        res += (next.block_x - now.block_x - 1) * rows + 2 * (next.block_x - now.block_x);
-        res += min(next.section + now.section, sections - now.section + sections - next.section);
-        return res;
-    } else {
-        int res = 0;
-        if (now.block_x < next.block_x) {
-            res = (rows - now.row) + next.row;
-            res += (next.block_x - now.block_x - 1) * rows + (next.block_x - now.block_x) * 2;
-        } else {
-            res = (rows - next.row) + now.row;
-            res += (now.block_x - next.block_x - 1) * rows + (now.block_x - next.block_x) * 2;
-        }
-
-        if (now.block_y < next.block_y) {
-            res += now.section + sections - next.section;
-            res += (next.block_y - now.block_y - 1) * sections + (next.block_y - now.block_y) * 2;
-        } else {
-            res += next.section + sections - now.section;
-            res += (now.block_y - next.block_y - 1) * sections + (now.block_y - next.block_y) * 2;
-        }
-
-        return res;
-    }
-}
 
 const int MAX_CAPACITY = 32;
 
 
+int dist_to_start(position self, position place) {
+    int ans = 0;
+    int dy = int((double) fabs((double) self.block_y / 2 + (double) 0.5 - (double) place.block_y) + (double) 0.5) - 1;
+    ans += dy * (self.row + 2);  // расстояние по горизонтали к центру
+    ans += (self.block_x - place.block_x) * (self.section + 2); // расстояние по вертикали к низу
+    if (place.block_y <= self.block_y / 2)
+        ans += (self.row - place.row);  // расстояние внутри блока
+    else
+        ans += place.row;
+    ans += (self.section + 1 - place.section);
+    return ans;
+}
+
+int dist_to_tape(position self, position place) {
+    int ans = place.section + (place.block_x - 1) * self.section;
+    return ans;
+}
+
+int get_dist_2_places(position self, position p1, position p2) {
+    int ans = 0;
+    if (p1.block_x != p2.block_x || p1.block_y != p2.block_y || p1.row != p2.row) {
+        if (p1.block_x > p2.block_x)
+            swap(p1, p2);
+        if (p1.block_x != p2.block_x)
+            ans += (p2.block_x - p1.block_x - 1) * self.section;
+        ans += (p2.block_x - p1.block_x) * 2 - 1;
+        ans += min(p1.section + p2.section, 2 * self.section - p1.section - p2.section + 2);
+        if (p1.block_y > p2.block_y) swap(p1, p2);
+
+        ans += (self.row - p1.row + 1) + p2.row;
+        if (p1.block_y != p2.block_y)
+            ans += (p2.block_y - p1.block_y - 1) * self.row;
+        ans += (p2.block_y - p1.block_y) * 2 - 1;
+        return ans;
+    } else return abs(p1.section - p2.section);
+}
+
 int calc(vector<int> &permutation, vector<product> &items, int rows, int sections,
          int block_x, int block_y) {
     if (permutation.empty()) return 0;
-    position start = {-1, block_x, block_y / 2, rows, 1};
-    position last = start;
     int res = 0;
-    for (int i = 0; i < items.size(); i++) {
+    int i = 0;
+    position self = {-1, block_x, block_y, rows, sections};
+    while (i < items.size() && items[permutation[i]].cnt == 0) i++;
+    if (i == items.size()) return 0;
+    res += dist_to_start(self, items[permutation[i]].p);
+    position last = items[permutation[i]].p;
+    i++;
+    for (; i < items.size(); i++) {
         int j = i;
         while (j < items.size() && items[permutation[j]].cnt == 0) j++;
         i = j;
         if (i == items.size()) break;
         position cur = items[permutation[i]].p;
-        res += get_distance(last, cur, rows, sections);
+        res += get_dist_2_places(self, last, cur);
         last = cur;
     }
-    position up = last;
-    up.block_y = 1;
-    up.section = sections;
-    res += get_distance(last, up, rows, sections) + 2;
-    res += get_distance(up, start, rows, sections);
+    res += dist_to_tape(self, last) * 2;
+    res += dist_to_start(self, last);
     return res;
 }
 
@@ -339,6 +332,7 @@ void print_bucket2(vector<vector<product>> &bucket, vector<vector<int>> &bestper
     }
 }
 
+int RES = 0;
 
 void print_bucket(vector<vector<product>> &bucket, vector<vector<int>> &bestpermutations) {
     json basket;
@@ -348,6 +342,7 @@ void print_bucket(vector<vector<product>> &bucket, vector<vector<int>> &bestperm
         items["items"] = {};
         for (int j = 0; j < bucket[i].size(); j++) {
             assert(bestpermutations[i].size() == bucket[i].size());
+            RES += bucket[i][bestpermutations[i][j]].cnt;
             assert(bucket[i][bestpermutations[i][j]].cnt >= 0);
             fill_up[bucket[i][bestpermutations[i][j]].p] += bucket[i][bestpermutations[i][j]].cnt;
             if (bucket[i][bestpermutations[i][j]].cnt == 0) continue;
@@ -413,11 +408,9 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         answers[i] = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
 
     bestanswers = answers;
-    long double t = 1 / 100.0;
+    long double t = 1;
     int sumres = 0, sumbestres = 0;
-    for (auto i: answers) {
-        sumres += i, sumbestres += i;
-    }
+    for (auto i: answers) sumres += i, sumbestres += i;
     for (int zigzig = 0; zigzig < 5000; zigzig++) {
         t *= 0.9999;
 //        print_bucket2(bucket, permutations);
@@ -433,7 +426,7 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
                 sumres += cur;
                 answers[i] = cur;
                 if (sumres < sumbestres) {
-                    answers[i] = cur;
+                    sumbestres = sumres;
                     bestanswers = answers;
                     bestpermutations = permutations;
                     bestbucket = bucket;
@@ -485,7 +478,6 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
             } else reverse(permutations[i].begin() + flipping.first, permutations[i].begin() + flipping.second + 1);
 
         }
-
         // полное перекладывание товара из 1 ячейки в другую
         for (int i = 0; i < bucket.size(); i++) {
             if (bucket[i].empty()) continue;
@@ -510,7 +502,7 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         }
 
 
-        // перекладывание товара в другую корзину bad
+        // перекладывание товара в другую корзину
         for (int i = 0; i < bucket.size(); i++) {
             if (bucket[i].empty()) continue;
             changing_bucket changing = mutation_changing_bucket(bucket, bucket_capacity, permutations, i);
@@ -585,10 +577,15 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         }
 
     }
+    for (int i = 0; i < bucket.size(); i++)
+        assert(bestpermutations[i].size() == bestbucket[i].size());
     int res = 0;
-    for (int i = 0; i < bucket.size(); i++) res += bestanswers[i];
-    if (type == 2)
-        print_bucket(bestbucket, bestpermutations);
+    for (int i = 0; i < bucket.size(); i++) {
+        int c = calc(bestpermutations[i], bestbucket[i], rows, sections, block_x, block_y);
+        assert (c == bestanswers[i]);
+        res += c;
+    }
+    if (type == 2) print_bucket(bestbucket, bestpermutations);
     return res;
 }
 
@@ -626,8 +623,8 @@ signed main() {
     cin >> data;
     int batch_size = data["batch_size"];
     int floors = data["warehouse"]["meta"]["floors"];
-    int block_x = data["warehouse"]["meta"]["block_y"];
-    int block_y = data["warehouse"]["meta"]["block_x"];
+    int block_x = data["warehouse"]["meta"]["block_x"];
+    int block_y = data["warehouse"]["meta"]["block_y"];
     int rows = data["warehouse"]["meta"]["rows"];
     int sections = data["warehouse"]["meta"]["sections"];
     map<int, vector<product>> product_position;
@@ -647,12 +644,15 @@ signed main() {
         products[i].p.floor = data["warehouse"]["stock"][i]["p"]["floor"];
         products[i].p.block_x = data["warehouse"]["stock"][i]["p"]["block_x"];
         products[i].p.block_y = data["warehouse"]["stock"][i]["p"]["block_y"];
+        assert(products[i].p.block_x <= block_x);
+        assert(products[i].p.block_y <= block_y);
         products[i].p.row = data["warehouse"]["stock"][i]["p"]["row"];
         products[i].p.section = data["warehouse"]["stock"][i]["p"]["section"];
         products[i].cnt = data["warehouse"]["stock"][i]["count"];
         product_position[products[i].id].push_back(products[i]);
         product_cnt[products[i].p] = products[i].cnt;
     }
+
     for (auto &i: product_position)
         sort(i.second.begin(), i.second.end());
     vector<vector<product>> cells;
@@ -668,6 +668,7 @@ signed main() {
         parse(order);
         map<pair<int, int>, int> popular_in_order;
         vector<product> order2;
+
         for (auto[id, cnt]: order) {
             int rem = cnt;
             for (auto &j: product_position[id]) {
@@ -675,29 +676,33 @@ signed main() {
                 rem -= mi;
                 auto need = j;
                 need.cnt = mi;
-                order2.push_back(need);
-                if (need.cnt > 0)
-                    popular_in_order[{need.p.block_x, need.p.block_y}]++;
                 used[j.p] += mi;
+                order2.push_back(need);
+                if (need.cnt > 0) popular_in_order[{need.p.block_x, need.p.block_y}]++;
             }
         }
+
         pair<int, int> most_popular_in_order = {-1, -1};
         for (auto j: popular_in_order)
             if (most_popular_in_order.first == -1 || j.second > popular_in_order[most_popular_in_order])
                 most_popular_in_order = j.first;
+
         popular[most_popular_in_order].push_back(order2);
     }
-
     vector<pair<int, int>> blocks;
     for (int i = 1; i <= block_x; i++)
         for (int j = 1; j <= block_y; j++)
             blocks.push_back({i, j});
+
     sort(blocks.begin(), blocks.end(), cmp);
 
     vector<vector<product>> orders2;
     for (auto block: blocks)
         for (auto &j: popular[block])
             orders2.push_back(j);
+
+
+    data_res["batches"] = {};
 
     for (int i = 0; i < orders2.size(); i += batch_size) {
         cells.push_back({});
@@ -711,10 +716,12 @@ signed main() {
     }
     vector<int> bestanswers = answers;
     vector<vector<product>> bestcells = cells;
-    long double t = 100.5;
-
+    long double t = 1;
+    int sumres = 0, sumbestres = 0;
+    for (auto i: answers)
+        sumres += i, sumbestres += i;
     if (tt > 1) {
-        for (int zigzag = 0; zigzag < 200; zigzag++) {
+        for (int zigzag = 0; zigzag < 20; zigzag++) {
             t *= 0.9999;
             for (int i = 0; i < tt; i++) {
                 swapping_batch swapping = mutation_swapping_batch(cells, i);
@@ -727,35 +734,32 @@ signed main() {
 
                 if (cur + cur2 < answers[i] + answers[swapping.chosen2] ||
                     exp((long double) (answers[i] + answers[swapping.chosen2] - cur - cur2) / t)) {
+                    sumres -= answers[i];
+                    sumres -= answers[swapping.chosen];
                     answers[i] = cur;
                     answers[swapping.chosen2] = cur2;
-                    int cres = 0, cbestres = 0;
-                    for (auto j: answers) cres += j;
-                    for (auto j: bestanswers) cbestres += j;
-                    if (cres < cbestres) {
+                    sumres += cur, sumres += cur2;
+                    if (sumres < sumbestres) {
                         bestcells = cells;
                         bestanswers = answers;
+                        sumbestres = sumres;
                     }
                 } else swap(cells[i][swapping.pr], cells[swapping.chosen2][swapping.pr2]);
             }
         }
     }
 
-    data_res["batches"] = {};
     for (int j = 0; j < 1; j++) {
         fill_up.clear();
         for (int i = 0; i < tt; i++)
             int cur = solve_batch(bestcells[i], product_position, used, product_cnt, floors, rows, sections, block_x,
                                   block_y, 2);
-        for (auto i: products) {
-            // cerr << fill_up[i.p] << ' ' << i.cnt << '\n';
-            assert(fill_up[i.p] <= i.cnt);
-        }
+        for (auto i: products) assert(fill_up[i.p] <= i.cnt);
     }
-
+//    cout << RES;
     int res = 0;
     for (auto i: bestanswers) res += i;
-//    cout << (long double) res / cntt;
+    cout << (long double) res / cntt << '\n';
     cout << data_res;
 
 }

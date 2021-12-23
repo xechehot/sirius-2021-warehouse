@@ -24,4 +24,24 @@ https://stasiandr.gitlab.io/ya-warehouse/
 * Загрузить файл [order.json](visual_sample/order.json) с описанием бакетов и путей обхода товаров
 * Наслаждаться визуализацией
 
+## Чекер расстояния
+
+Для использования нужно установить `click`:
+```
+pip install -U click
+```
+
+В папке [Maksim](Maksim) запускаем чекер, такой командой:
+```shell
+ python3 check/main.py --sample '../data_sample/sample_1600_1.json' --output '../data_sample/output.json'
+```
+В данном примере получим вывод:
+```
+Total dist: 155
+Total items: 2
+Avg dist per item: 77.5
+```
+Параметры:
+* `--sample` - путь к входному файлу на котором был запущен алгоритм
+* `--output` - путь к резльтату работы алгоритма
 

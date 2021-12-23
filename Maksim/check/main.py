@@ -14,6 +14,13 @@ def load_file(path):
 @click.option("--output", help="Выходной файл")
 def check_dist(sample, output):
     sample_data = load_file(sample)
+
+    orders_items = 0
+    for order in sample_data['orders']:
+        for item in order['items']:
+            orders_items+=item['count']
+    print(f'Total items in input sample: {orders_items}')
+
     output_data = load_file(output)
     wh_meta = sample_data['warehouse']['meta']
     checker = DistChecker(block_x=wh_meta['block_x'],

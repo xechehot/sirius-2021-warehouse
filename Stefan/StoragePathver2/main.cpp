@@ -408,7 +408,7 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         answers[i] = calc(permutations[i], bucket[i], rows, sections, block_x, block_y);
 
     bestanswers = answers;
-    long double t = 1;
+    long double t = 0.5;
     int sumres = 0, sumbestres = 0;
     for (auto i: answers) sumres += i, sumbestres += i;
     for (int zigzig = 0; zigzig < 5000; zigzig++) {
@@ -427,7 +427,6 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
                 answers[i] = cur;
                 if (sumres < sumbestres) {
                     sumbestres = sumres;
-                    bestanswers = answers;
                     bestpermutations = permutations;
                     bestbucket = bucket;
                 }
@@ -451,7 +450,6 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
                 answers[i] = cur;
                 if (sumres < sumbestres) {
                     sumbestres = sumres;
-                    bestanswers = answers;
                     bestpermutations = permutations;
                     bestbucket = bucket;
                 }
@@ -471,7 +469,6 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
                 answers[i] = cur;
                 if (sumres < sumbestres) {
                     sumbestres = sumres;
-                    bestanswers = answers;
                     bestpermutations = permutations;
                     bestbucket = bucket;
                 }
@@ -490,7 +487,6 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
                 answers[i] = cur;
                 if (sumres < sumbestres) {
                     sumbestres = sumres;
-                    bestanswers = answers;
                     bestpermutations = permutations;
                     bestbucket = bucket;
                 }
@@ -519,7 +515,6 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
                 answers[changing.chosen] = cur2;
                 if (sumres < sumbestres) {
                     sumbestres = sumres;
-                    bestanswers = answers;
                     bestpermutations = permutations;
                     bestbucket = bucket;
                 }
@@ -554,7 +549,6 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
                 answers[i] = 0;
                 if (sumres < sumbestres) {
                     sumbestres = sumres;
-                    bestanswers = answers;
                     bestpermutations = permutations;
                     bestbucket = bucket;
                 }
@@ -577,16 +571,8 @@ solve_batch(vector<product> &cells2, map<int, vector<product>> &product_position
         }
 
     }
-    for (int i = 0; i < bucket.size(); i++)
-        assert(bestpermutations[i].size() == bestbucket[i].size());
-    int res = 0;
-    for (int i = 0; i < bucket.size(); i++) {
-        int c = calc(bestpermutations[i], bestbucket[i], rows, sections, block_x, block_y);
-        assert (c == bestanswers[i]);
-        res += c;
-    }
     if (type == 2) print_bucket(bestbucket, bestpermutations);
-    return res;
+    return sumbestres;
 }
 
 
@@ -617,8 +603,8 @@ bool cmp(pair<int, int> a, pair<int, int> b) {
 
 
 signed main() {
-    freopen("../../../data_sample/sample_64_1.json", "r", stdin);
-    freopen("../../../data_sample_output/output_64_1_stepan.json", "w", stdout);
+    freopen("../../../data_sample/sample_1600_1.json", "r", stdin);
+    freopen("../../../data_sample_output/output_1600_1_stepan.json", "w", stdout);
     json data;
     cin >> data;
     int batch_size = data["batch_size"];
@@ -644,8 +630,6 @@ signed main() {
         products[i].p.floor = data["warehouse"]["stock"][i]["p"]["floor"];
         products[i].p.block_x = data["warehouse"]["stock"][i]["p"]["block_x"];
         products[i].p.block_y = data["warehouse"]["stock"][i]["p"]["block_y"];
-        assert(products[i].p.block_x <= block_x);
-        assert(products[i].p.block_y <= block_y);
         products[i].p.row = data["warehouse"]["stock"][i]["p"]["row"];
         products[i].p.section = data["warehouse"]["stock"][i]["p"]["section"];
         products[i].cnt = data["warehouse"]["stock"][i]["count"];
@@ -655,6 +639,7 @@ signed main() {
 
     for (auto &i: product_position)
         sort(i.second.begin(), i.second.end());
+
     vector<vector<product>> cells;
     int tt = 0;
     vector<int> answers;
@@ -678,7 +663,7 @@ signed main() {
                 need.cnt = mi;
                 used[j.p] += mi;
                 order2.push_back(need);
-                if (need.cnt > 0) popular_in_order[{need.p.block_x, need.p.block_y}]++;
+                popular_in_order[{need.p.block_x, need.p.block_y}] += need.cnt;
             }
         }
 
@@ -714,14 +699,13 @@ signed main() {
                                   block_y, 1);
         tt++;
     }
-    vector<int> bestanswers = answers;
     vector<vector<product>> bestcells = cells;
     long double t = 1;
     int sumres = 0, sumbestres = 0;
     for (auto i: answers)
         sumres += i, sumbestres += i;
     if (tt > 1) {
-        for (int zigzag = 0; zigzag < 20; zigzag++) {
+        for (int zigzag = 0; zigzag < 30; zigzag++) {
             t *= 0.9999;
             for (int i = 0; i < tt; i++) {
                 swapping_batch swapping = mutation_swapping_batch(cells, i);
@@ -741,7 +725,6 @@ signed main() {
                     sumres += cur, sumres += cur2;
                     if (sumres < sumbestres) {
                         bestcells = cells;
-                        bestanswers = answers;
                         sumbestres = sumres;
                     }
                 } else swap(cells[i][swapping.pr], cells[swapping.chosen2][swapping.pr2]);
@@ -757,9 +740,7 @@ signed main() {
         for (auto i: products) assert(fill_up[i.p] <= i.cnt);
     }
 //    cout << RES;
-    int res = 0;
-    for (auto i: bestanswers) res += i;
-    cout << (long double) res / cntt << '\n';
+//    cout << (long double) sumbestres / cntt << '\n';
     cout << data_res;
 
 }
